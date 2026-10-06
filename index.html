@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<title>Love Bomb</title>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;min-height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#fff;background:#120b19}
+body{min-height:100vh;min-height:100dvh;background:radial-gradient(circle at 15% 0%,#5c1d42 0,transparent 35%),radial-gradient(circle at 100% 100%,#35205d 0,transparent 40%),#120b19;overflow:hidden}
+.wrap{width:min(500px,100%);height:100vh;height:100dvh;margin:auto;padding:18px;display:flex;align-items:center}
+.card{width:100%;max-height:100%;padding:22px 18px;border-radius:28px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);backdrop-filter:blur(14px);text-align:center;box-shadow:0 24px 70px rgba(0,0,0,.35)}
+.hidden{display:none!important}
+.logo{font-size:66px;margin-bottom:8px}
+h1{font-size:31px;margin:8px 0}h2{margin:8px 0 14px;font-size:21px}p{color:#d9cbdc;line-height:1.55}
+button{font:inherit;cursor:pointer}
+.primary{width:100%;padding:15px;border:0;border-radius:17px;font-size:17px;font-weight:800;color:white;background:linear-gradient(135deg,#ff4f8b,#ff8fb5);box-shadow:0 10px 30px rgba(255,79,139,.25)}
+.rules{margin:20px 0;text-align:left;background:rgba(0,0,0,.18);padding:15px 18px;border-radius:18px;line-height:1.8}
+.top{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;margin-bottom:10px;font-weight:800}
+.stat{background:rgba(255,255,255,.09);border-radius:13px;padding:9px 4px;font-size:14px}
+#arena{height:min(62vh,520px);position:relative;overflow:hidden;border-radius:22px;background:rgba(0,0,0,.23);border:1px solid rgba(255,255,255,.1);touch-action:manipulation}
+.item{position:absolute;border:0;background:transparent;padding:3px;line-height:1;font-size:42px;filter:drop-shadow(0 6px 10px rgba(0,0,0,.4));animation:pop .12s ease-out}
+@keyframes pop{from{transform:scale(.4)}to{transform:scale(1)}}
+.float{position:absolute;font-weight:900;font-size:18px;pointer-events:none;animation:float .65s forwards}
+@keyframes float{to{transform:translateY(-35px);opacity:0}}
+.shake{animation:shake .3s}
+@keyframes shake{25%{transform:translateX(-7px)}50%{transform:translateX(7px)}75%{transform:translateX(-4px)}}
+.result{font-size:75px;margin:10px}
+.small{font-size:13px;color:#baaabd}
+</style>
+</head>
+<body>
+<div class="wrap"><main class="card">
+
+<section id="intro">
+<div class="logo">💣❤️</div>
+<h1>LOVE BOMB</h1>
+<p>Catch the love. Avoid the danger.<br>Can Beeboo survive 60 seconds?</p>
+<div class="rules">
+❤️ Heart = <b>+1</b><br>
+💖 Golden Heart = <b>+3</b><br>
+💔 Broken Heart = <b>-2</b><br>
+💣 Bomb = <b>-1 life</b><br>
+🎯 Goal = <b>50 points</b>
+</div>
+<button class="primary" onclick="startGame()">START GAME</button>
+<p class="small">You have 3 lives.</p>
+</section>
+
+<section id="game" class="hidden">
+<div class="top">
+<div class="stat">SCORE<br><span id="score">0</span>/50</div>
+<div class="stat">LIVES<br><span id="lives">❤️❤️❤️</span></div>
+<div class="stat">TIME<br><span id="time">60.0</span></div>
+</div>
+<h2 id="phase">WARM UP</h2>
+<div id="arena"></div>
+</section>
+
+<section id="win" class="hidden">
+<div class="result">⭐</div>
+<h1>YOU WIN!</h1>
+<p>Beeboo survived the Love Bomb challenge.</p>
+<h2>STAR EARNED ⭐</h2>
+<button class="primary" onclick="startGame()">PLAY AGAIN</button>
+</section>
+
+<section id="fail" class="hidden">
+<div class="result" id="failIcon">💔</div>
+<h1 id="failTitle">SO CLOSE!</h1>
+<p id="failText"></p>
+<button class="primary" onclick="startGame()">TRY AGAIN</button>
+</section>
+
+</main></div>
+
+<script>
+let score=0,lives=3,endTime=0,clock=null,spawner=null,running=false;
+const goal=50,duration=60000;
+const arena=document.getElementById("arena");
+
+function show(id){
+ document.querySelectorAll("main>section").forEach(s=>s.classList.add("hidden"));
+ document.getElementById(id).classList.remove("hidden");
+}
+function startGame(){
+ score=0;lives=3;running=true;arena.innerHTML="";
+ document.getElementById("score").textContent=0;
+ document.getElementById("lives").textContent="❤️❤️❤️";
+ document.getElementById("time").textContent="60.0";
+ show("game");
+ endTime=performance.now()+duration;
+ clearInterval(clock);clearTimeout(spawner);
+ clock=setInterval(updateClock,50);
+ scheduleSpawn();
+}
+function updateClock(){
+ if(!running)return;
+ let left=Math.max(0,endTime-performance.now());
+ document.getElementById("time").textContent=(left/1000).toFixed(1);
+ let elapsed=duration-left;
+ document.getElementById("phase").textContent=elapsed<20000?"WARM UP":elapsed<40000?"GETTING FASTER":"FINAL RUSH!";
+ if(left<=0)finish(score>=goal);
+}
+function scheduleSpawn(){
+ if(!running)return;
+ let elapsed=duration-Math.max(0,endTime-performance.now());
+ let delay=elapsed<20000?650:elapsed<40000?470:330;
+ spawnWave(elapsed);
+ spawner=setTimeout(scheduleSpawn,delay);
+}
+function spawnWave(elapsed){
+ let count=elapsed<20000?1:elapsed<40000?(Math.random()<.35?2:1):(Math.random()<.65?2:1);
+ for(let i=0;i<count;i++) setTimeout(spawnItem,i*90);
+}
+function spawnItem(){
+ if(!running)return;
+ let r=Math.random(),type,emoji,value;
+ if(r<.57){type="heart";emoji="❤️";value=1}
+ else if(r<.70){type="gold";emoji="💖";value=3}
+ else if(r<.84){type="broken";emoji="💔";value=-2}
+ else{type="bomb";emoji="💣";value=0}
+ const b=document.createElement("button");
+ b.className="item";b.textContent=emoji;
+ const size=52;
+ b.style.left=Math.random()*Math.max(1,arena.clientWidth-size)+"px";
+ b.style.top=Math.random()*Math.max(1,arena.clientHeight-size)+"px";
+ b.dataset.type=type;
+ b.onclick=e=>hit(e.currentTarget,value,type);
+ arena.appendChild(b);
+ let elapsed=duration-Math.max(0,endTime-performance.now());
+ let life=elapsed<20000?1150:elapsed<40000?900:700;
+ setTimeout(()=>{if(b.isConnected)b.remove()},life);
+}
+function hit(el,value,type){
+ if(!running||!el.isConnected)return;
+ const x=el.offsetLeft,y=el.offsetTop;
+ el.remove();
+ if(type==="bomb"){
+   lives--;
+   document.getElementById("lives").textContent="❤️".repeat(lives)+"🖤".repeat(3-lives);
+   floatText(x,y,"-1 LIFE");
+   document.querySelector(".card").classList.add("shake");
+   setTimeout(()=>document.querySelector(".card").classList.remove("shake"),300);
+   if(navigator.vibrate)navigator.vibrate(60);
+   if(lives<=0){finish(false,true);return}
+ }else{
+   score=Math.max(0,score+value);
+   document.getElementById("score").textContent=score;
+   floatText(x,y,value>0?"+"+value:String(value));
+ }
+}
+function floatText(x,y,t){
+ const f=document.createElement("div");f.className="float";f.textContent=t;
+ f.style.left=x+"px";f.style.top=y+"px";arena.appendChild(f);
+ setTimeout(()=>f.remove(),700);
+}
+function finish(win,dead=false){
+ if(!running)return;
+ running=false;clearInterval(clock);clearTimeout(spawner);arena.innerHTML="";
+ if(win){show("win")}
+ else{
+   document.getElementById("failIcon").textContent=dead?"💥":"💔";
+   document.getElementById("failTitle").textContent=dead?"GAME OVER":"TIME'S UP!";
+   document.getElementById("failText").textContent=dead
+    ?`Beeboo lost all 3 lives with ${score} points.`
+    :`Beeboo scored ${score}/50. Reach 50 points to earn the star.`;
+   show("fail");
+ }
+}
+</script>
+</body>
+</html>
